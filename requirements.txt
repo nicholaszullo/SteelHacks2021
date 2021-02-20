@@ -1,5 +1,6 @@
 chess==1.4.0
 numpy==1.20.1
 python-chess==1.999
+tk==0.1.0
 torch==1.7.1
 typing-extensions==3.7.4.3
