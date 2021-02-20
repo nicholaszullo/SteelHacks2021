@@ -1,5 +1,6 @@
 import math
 import random
+from tqdm import tqdm
 
 class Node:
 	"""
@@ -11,14 +12,15 @@ class Node:
 	def __init__(self, move = None, parent = None, state = None):
 		self.move = move		#Previously made move
 		self.parent = parent	#Parent node of state
-		self.untried = state	#State of game at Node
+		self.untried = list(state.generate_legal_moves())	#State of game at Node
 		self.wins = 0			#Wins following this move path
 		self.visits = 0			#Visits down this move path
 		self.children = []		#States after taking a legal move
 		self.color = state.turn #Record color for update
+		self.state = state
 
 	def __repr__(self) -> str:
-		return f"State is {self.state} parent is {self.parent} move is {self.move} children are {self.children}"
+		return f"State is {self.state}"
 
 
 	def create_child(self, move, state):
@@ -47,7 +49,7 @@ class Node:
 def run(start, iters):
 	root = Node(state = start)
 
-	for i in range(iters):
+	for i in tqdm(range(iters)):
 		curr = root
 		state = start.copy()	#Create copy of board state for each new iteration so original is preserved
 		"""
@@ -63,24 +65,27 @@ def run(start, iters):
 			move = random.choice(curr.untried)	#chose random move to make child of 
 			state.push(move)
 			curr = curr.create_child(move, state)
+
 		
 		#Simulation, play game
 		legal_moves = list(state.generate_legal_moves())
-		while legal_moves != []:		#No moves means game is over
-			state.push(random.choice(state))
+		while not state.is_game_over():		#No moves means game is over
+			state.push(random.choice(legal_moves))
 			legal_moves = list(state.generate_legal_moves())
+		#	print(state.fen())
 		
 		white_val = 0
 		black_val = 0
 		if state.result() == "1-0":
 			white_val = 1
 			black_val = 0
-		elif state.result() == "1/2-1/2":
-			white_val = 1/2
-			black_val = 1/2
-		else:
+		elif state.result == "0-1":
 			black_val = 1
 			white_val = 0
+		else: 
+			white_val = 1/2
+			black_val = 1/2
+	
 
 		#Backprop
 		while curr != None:
@@ -89,6 +94,6 @@ def run(start, iters):
 			else:
 				curr.update_state(black_val)		
 			curr = curr.parent		#Recurse up tree
-
+	return root
 	
 		
