@@ -1,5 +1,6 @@
 import math
 import random
+import torch
 from tqdm import tqdm
 
 class Node:
@@ -18,6 +19,7 @@ class Node:
 		self.children = []		#States after taking a legal move
 		self.color = state.turn #Record color for update
 		self.state = state
+		self.y_pred = 0
 
 	def __repr__(self) -> str:
 		return f"State is {self.state}"
@@ -32,15 +34,27 @@ class Node:
 		self.children.append(child)
 		return child
 	
+	def predict(self, nn):
+		key = [.01, 1, 2.9, 3, 5, 9, 1.5]
+		x = torch.zeros(size=(1,64), requires_grad=True).to(nn.device)
+		for i in range(64):
+			piece = self.state.piece_at(i)
+			if piece == None:
+				x[0,i] = key[0]
+			else: 
+				x[0,i] = key[piece.piece_type] if piece.color else -key[piece.piece_type]
+		self.y_pred = nn(x)
+
 	def update_state(self, val):
 		self.visits += 1
 		self.wins += val
 
-	def chose_path(self):
+	def chose_path(self,nn):
 		max = float("-inf")
 		choice = None
 		for child in self.children:
-			val = (child.wins / child.visits) + math.sqrt(2*math.log(self.visits)/child.visits)	#UCB1 Selection of node
+			child.predict(nn)
+			val = ((child.wins / child.visits) + math.sqrt(2*math.log(self.visits)/child.visits))*child.y_pred	#UCB1 Selection of node
 			if max < val:
 				choice = child
 				max = val
@@ -48,12 +62,13 @@ class Node:
 
 class MCTS():
 
-	def __init__(self, start) -> None:
+	def __init__(self, start, net) -> None:
 		self.root = Node(state=start)
 		self.white_wins = 0
 		self.black_wins = 0
 		self.draws = 0
 		self.last_win = None
+		self.nn = net
 
 	def run(self, iters):
 		for _ in tqdm(range(iters)):
@@ -64,48 +79,57 @@ class MCTS():
 			"""
 			#Select
 			while curr.untried == [] and curr.children != []:	#Stop leaf node
-				curr = curr.chose_path()	#determine child to move to
+				curr = curr.chose_path(self.nn)	#determine child to move to
 				state.push(curr.move)	#move state to curr's state
 
 			#Expand
-			if curr.untried != []:	#Generate children for state
-				move = random.choice(curr.untried)	#chose random move to make child of 
+			if curr.untried != []:	#Generate a child for state
+				move = random.choice(curr.untried)	
 				state.push(move)
 				curr = curr.create_child(move, state)
 
 			
 			#Simulation, play game
-			legal_moves = list(state.generate_legal_moves())
 			while not state.is_game_over() and len(state.move_stack) < 100:		#Stop when game is over or move limit exceeded
-				state.push(random.choice(legal_moves))
-				legal_moves = list(state.generate_legal_moves())
+				max = float("-inf")
+				choice = None
+				for move in curr.untried:
+					curr.predict(self.nn)
+					if curr.y_pred > max:
+						max = curr.y_pred
+						choice = move
+
+				state.push(choice)
+				curr = curr.create_child(choice, state)
+				
+
 			
 			white_val = 0
 			black_val = 0
 			if state.result() == "1-0":
-				white_val = 2
-				black_val = 0
+				white_val = 1
+				black_val = -1
 				self.last_win = state
 				self.white_wins += 1
 			elif state.result() == "0-1":
-				black_val = 2
-				white_val = 0
+				black_val = 1
+				white_val = -1
 				self.last_win = state
 				self.black_wins += 1
-			elif state.result() == "1/2-1/2":
-				white_val = 1/5
-				black_val = 1/5
+			else:
+				white_val = 1/2
+				black_val = 1/2
 				self.draws += 1
-			else: 			#Penalize unfinished games
-				white_val = -1/10
-				black_val = -1/10
 
 			#Backprop
 			while curr != None:
 				if (curr.color):	#white is true
 					curr.update_state(white_val)	#change wins at node based on result of game
+					self.nn.backward(curr.y_pred, white_val)
 				else:
-					curr.update_state(black_val)		
+					curr.update_state(black_val)	
+					self.nn.backward(curr.y_pred, black_val)	
 				curr = curr.parent		#Recurse up tree
+
 		
 			
