@@ -10,51 +10,112 @@ import chess.svg
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPDF, renderPM
 from PIL import Image, ImageTk
+from tempfile import TemporaryFile
 
 LARGE_FONT= ("Verdana", 12)
-TEMP_SVG = "temp.svg"
+BOARD_PIXEL_SIZE = 390
 TEMP_PNG = "temp.png"
+TEMP_SVG = "temp.svg"
 
 class Application(tk.Tk):
 
     # Constructor
-    def __init__(self, input_board, *args, **kwargs):
+    def __init__(self, input_mcts, *args, **kwargs):
         
         # Store board (game ended)
 
         # Boilerplate grid code
         tk.Tk.__init__(self, *args, **kwargs)
-        frame = ChessBoard(self, input_board)
-        frame.pack()
+        self.model = input_mcts  # This holds all of the model data
+
+
+        # Make a 2x2 grid (board on left, info on right, buttons bottom right)
+        self.data_panel = None
+        self.chessboard = ChessBoard(self)
+        self.button_panel = ButtonPanel(self)
+        self.data_panel = DataPanel(self)
+
+        self.chessboard.grid(column=0,rowspan=2)
+        self.button_panel.grid(column=1,row=1)
+        self.data_panel.grid(column=1, row=0)
+
+
+# ButtonPanel class
+class ButtonPanel(tk.Frame):
+
+    # Constructor
+    def __init__(self, parent):
+        tk.Frame.__init__(self,parent)
+        self.parent = parent
+
+        cb = self.parent.chessboard
+        forward_move = tk.Button(self, text="> Move >", command=cb.forward_move)
+        backward_move = tk.Button(self, text="< Move <", command=cb.backward_move)
+        forward_game = tk.Button(self, text="> Game >", command=cb.forward_game)
+        backward_game = tk.Button(self, text="< Game <", command=cb.backward_game)
+
+        forward_move.grid(column=1, row=0)
+        backward_move.grid(column=0, row=0)
+        forward_game.grid(column=1, row=1)
+        backward_game.grid(column=0, row=1)
+
+
+# DataPanel class
+class DataPanel(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self,parent)
+        self.parent = parent
+
+        self.current_move_num = tk.StringVar()
+        self.current_board_num = tk.StringVar()
+        self.last_move = tk.StringVar()
+        self.to_play = tk.StringVar()
+
+        # Instance variables
+        self.update_data()
+
+        # Pack labels
+        lbls = [
+            tk.Label(self, text="Flowgod's FlowChess", font=LARGE_FONT),
+            tk.Label(self, textvariable=self.current_move_num),
+            tk.Label(self, textvariable=self.current_board_num),
+            tk.Label(self, textvariable=self.last_move),
+            tk.Label(self, textvariable=self.to_play),
+        ]
+
+        for lbl in lbls:
+            lbl.pack()
+
+
+    def update_data(self):
+
+        # Set instance variables based on mcts
+        cb = self.parent.chessboard
+        self.current_move_num.set(f"Move number: {cb.active_move}")
+        self.current_board_num.set(f"Board number: {cb.active_board}")
+        last_move_string = cb._board.move_stack[-1].uci() if len(cb._board.move_stack) > 0 else None
+        self.last_move.set(f"Last move: {last_move_string}")
+        self.to_play.set(f"To play: {'WHITE' if cb._board.turn else 'BLACK'}")
+
 
 # Chessboard class
-
 class ChessBoard(tk.Frame):
 
-    def __init__(self, parent, input_board):
+    def __init__(self, parent):
         tk.Frame.__init__(self,parent)
 
         # Instance variables
-        self.move_stack = input_board.move_stack
-        self.board = chess.Board()
-        self.move_to_play = 0
+        self.active_board = 0
+        self.active_move = 0
+        self.parent = parent
 
-        # Header
-        self.label = tk.Label(self, text="ChessBoard", font=LARGE_FONT)
 
         # Board (make svg and pass into png)
-        self.board_frame = tk.Canvas(self, width=390, height=390)
+        self.board_image = None
+        self.board_frame = tk.Canvas(self, width=BOARD_PIXEL_SIZE, height=BOARD_PIXEL_SIZE)
         self.board_frame.pack()
 
-        # Buttons
-        forward_button = tk.Button(parent, text=">", command=self.forward)
-        backward_button = tk.Button(parent, text="<",  command=self.backward)
-
-        self.label.pack(anchor='n')
-        self.board_frame.pack(anchor='center')
-        forward_button.pack(anchor='se')
-        backward_button.pack(anchor='sw')
-
+        self.forward_game()
         self.update()
 
         
@@ -62,33 +123,59 @@ class ChessBoard(tk.Frame):
     # Rerender
     def update(self):
 
-        # Get png from board
-        svg_info = chess.svg.board(board=self.board)
+        # Replace image
+        svg_info = chess.svg.board(board=self._board)
         with open(TEMP_SVG, "w") as f:
             f.write(svg_info)
         drawing = svg2rlg(TEMP_SVG)
         renderPM.drawToFile(drawing, TEMP_PNG, fmt="PNG")
         self.board_image = ImageTk.PhotoImage(Image.open(TEMP_PNG))
-        self.board_frame.create_image(195,195, image=self.board_image)
+        self.board_frame.create_image(BOARD_PIXEL_SIZE/2,BOARD_PIXEL_SIZE/2, image=self.board_image)
 
-    # Move board forward
-    def forward(self):
-        if (len(self.move_stack) == 0 or self.move_to_play >= len(self.move_stack)):
-            # Do nothing
-            return
+        # Update datapanel
+        if (self.parent.data_panel is not None): self.parent.data_panel.update_data()
 
-        self.board.push(self.move_stack[self.move_to_play])
-        self.move_to_play += 1
-        self.update()
-
-    def backward(self):
-        if (self.move_to_play == 0):
-            # Do nothing
+    # Move game forward
+    def forward_move(self):
+        if (self.active_move + 1 >= self.num_moves()):
             return
         # else
-        self.board.pop()
-        self.move_to_play -= 1
+        self._board.push(self._stack[self.active_move])
+        self.active_move += 1
         self.update()
+
+    # Move game backward
+    def backward_move(self):
+        if (self.active_move == 0):
+            return
+        # else
+        self.active_move -= 1
+        self._board.pop()
+        self.update()
+
+    # Forward in game list
+    def forward_game(self):
+        self.active_board = (self.active_board + 1) % self.num_games()
+        self.active_move = 0
+        self._stack = self.parent.model.last_win.move_stack
+        self._board = chess.Board()
+        self.update()
+
+    # Backward in game list
+    def backward_game(self):
+        self.active_board = (self.active_board - 1) % self.num_games()
+        self.active_move = 0
+        self._stack = self.parent.model.last_win.move_stack
+        self._board = chess.Board()
+        self.update()
+
+    # Availible moves
+    def num_moves(self):
+        return (len(self.parent.model.last_win.move_stack))
+
+    # Availible games
+    def num_games(self):
+        return 1 # TODO: support multiple games
 
 
 # # Chess board class
