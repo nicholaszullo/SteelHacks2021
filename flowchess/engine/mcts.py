@@ -48,7 +48,7 @@ class Node:
 
 def run(start, iters):
 	root = Node(state = start)
-
+	numWins = 0
 	for i in tqdm(range(iters)):
 		curr = root
 		state = start.copy()	#Create copy of board state for each new iteration so original is preserved
@@ -69,7 +69,7 @@ def run(start, iters):
 		
 		#Simulation, play game
 		legal_moves = list(state.generate_legal_moves())
-		while not state.is_game_over():		#No moves means game is over
+		while not state.is_game_over() and len(state.move_stack) < 100:		#No moves means game is over
 			state.push(random.choice(legal_moves))
 			legal_moves = list(state.generate_legal_moves())
 		#	print(state.fen())
@@ -79,13 +79,20 @@ def run(start, iters):
 		if state.result() == "1-0":
 			white_val = 1
 			black_val = 0
+			win = state
+			numWins += 1
 		elif state.result == "0-1":
 			black_val = 1
 			white_val = 0
+			win = state
+			numWins += 1
 		else: 
 			white_val = 1/2
 			black_val = 1/2
-	
+		if i == iters -1:
+			print(win.move_stack)
+			print(win.fen())
+			print(numWins)
 
 		#Backprop
 		while curr != None:
