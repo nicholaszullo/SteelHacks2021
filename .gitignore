@@ -1,4 +1,5 @@
 .vscode
 env
-.svg
+*.svg
+*.png
 __pycache__
