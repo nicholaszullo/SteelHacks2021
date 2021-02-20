@@ -137,7 +137,7 @@ class ChessBoard(tk.Frame):
 
     # Move game forward
     def forward_move(self):
-        if (self.active_move + 1 >= self.num_moves()):
+        if (self.active_move + 1 > self.num_moves()):
             return
         # else
         self._board.push(self._stack[self.active_move])

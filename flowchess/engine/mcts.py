@@ -1,6 +1,7 @@
 import math
 import random
 import torch
+import time
 from tqdm import tqdm
 
 class Node:
@@ -19,7 +20,7 @@ class Node:
 		self.children = []		#States after taking a legal move
 		self.color = state.turn #Record color for update
 		self.state = state
-		self.y_pred = 0
+		self.y_pred = None
 
 	def __repr__(self) -> str:
 		return f"State is {self.state}"
@@ -90,8 +91,12 @@ class MCTS():
 
 			
 			#Simulation, play game
+			legal_moves = list(state.generate_legal_moves())
 			while not state.is_game_over() and len(state.move_stack) < 100:		#Stop when game is over or move limit exceeded
-				max = float("-inf")
+				state.push(random.choice(legal_moves))
+				legal_moves = list(state.generate_legal_moves())
+				
+				"""max = float("-inf")
 				choice = None
 				for move in curr.untried:
 					curr.predict(self.nn)
@@ -100,7 +105,7 @@ class MCTS():
 						choice = move
 
 				state.push(choice)
-				curr = curr.create_child(choice, state)
+				curr = curr.create_child(choice, state)"""
 				
 
 			
@@ -125,10 +130,12 @@ class MCTS():
 			while curr != None:
 				if (curr.color):	#white is true
 					curr.update_state(white_val)	#change wins at node based on result of game
-					self.nn.backward(curr.y_pred, white_val)
+					if not curr.y_pred == None:
+						self.nn.backward(curr.y_pred, white_val)
 				else:
-					curr.update_state(black_val)	
-					self.nn.backward(curr.y_pred, black_val)	
+					curr.update_state(black_val)
+					if not curr.y_pred == None:
+						self.nn.backward(curr.y_pred, black_val)	
 				curr = curr.parent		#Recurse up tree
 
 		

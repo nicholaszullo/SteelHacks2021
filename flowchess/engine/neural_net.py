@@ -12,8 +12,8 @@ class NeuralNet(nn.Module):
 
 		self.device = device
 		self.input = nn.Linear(64,20,bias=True)
-		self.hidden = nn.Linear(20,20,bias=True)
-		self.output = nn.Linear(20,1,bias=True)
+		self.hidden = nn.Linear(20,10,bias=True)
+		self.output = nn.Linear(10,1,bias=True)
 		self.optim = torch.optim.Adam(self.parameters(), lr=lr)
 		self.to(device)
 
