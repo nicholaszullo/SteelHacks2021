@@ -37,7 +37,7 @@ class Node:
 		self.wins += val
 
 	def chose_path(self):
-		max = 0
+		max = float("-inf")
 		choice = None
 		for child in self.children:
 			val = (child.wins / child.visits) + math.sqrt(2*math.log(self.visits)/child.visits)	#UCB1 Selection of node
@@ -83,12 +83,12 @@ class MCTS():
 			white_val = 0
 			black_val = 0
 			if state.result() == "1-0":
-				white_val = 1
+				white_val = 2
 				black_val = 0
 				self.last_win = state
 				self.white_wins += 1
 			elif state.result() == "0-1":
-				black_val = 1
+				black_val = 2
 				white_val = 0
 				self.last_win = state
 				self.black_wins += 1
@@ -97,8 +97,8 @@ class MCTS():
 				black_val = 1/5
 				self.draws += 1
 			else: 			#Penalize unfinished games
-				white_val = -1/2
-				black_val = -1/2
+				white_val = -1/10
+				black_val = -1/10
 
 			#Backprop
 			while curr != None:

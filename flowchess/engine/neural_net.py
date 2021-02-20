@@ -3,6 +3,10 @@ from torch import nn
 import mcts
 import math
 
+"""
+Given a state of the board
+"""
+
 class NeuralNet(nn.Module):
 	def __init__(self):
 		super().__init__()
@@ -14,13 +18,6 @@ class NeuralNet(nn.Module):
 	def forward(self, x):
 		x = nn.functional.relu(self.input(x))		#ReLU activation
 		x = nn.functional.relu(self.hidden(x))
-		x = torch.sigmoid(self.output(x))							#Sigmoid activation
+		x = torch.sigmoid(self.output(x))			#Sigmoid activation
 
-
-
-
-
-weight = torch.rand(1, requires_grad=True) 
-bias = torch.rand(1, requires_grad=True)
-learning_rate = .01
 
