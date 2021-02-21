@@ -36,14 +36,13 @@ class Node:
 		return child
 	
 	def predict(self, nn):
-		key = [.01, 1, 2.9, 3, 5, 9, 1.5]
+		key = [.01, 1, 2.9, 3, 5, 9, 1.5]	#Empty, Pawn, Knight, Bishop, Rook, Queen, King
 		x = torch.zeros(size=(1,64), requires_grad=True).to(nn.device)
-		for i in range(64):
+		for i in range(64):				#Create flat board whre each piece is represented by its value
 			piece = self.state.piece_at(i)
 			if piece == None:
 				x[0,i] = key[0]
-			else: 
-				x[0,i] = key[piece.piece_type] if piece.color else -key[piece.piece_type]
+
 		self.y_pred = nn(x)
 
 	def update_state(self, val):
