@@ -75,7 +75,7 @@ class MCTS():
 			curr = self.root
 			state = self.root.state.copy()	#Create copy of board state for each new iteration so original is preserved
 			"""
-			MCTS has 4 components, selction, expansion, simulation, backpropogation
+			MCTS has 4 components, selction, expansion, simulation, back propagation
 			"""
 			#Select
 			while curr.untried == [] and curr.children != []:	#Stop leaf node
@@ -95,7 +95,7 @@ class MCTS():
 				state.push(random.choice(legal_moves))
 				legal_moves = list(state.generate_legal_moves())
 				
-				"""max = float("-inf")
+				"""max = float("-inf")		#Draws all games when doing this?
 				choice = None
 				for move in curr.untried:
 					curr.predict(self.nn)
