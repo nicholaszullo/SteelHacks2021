@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import math
 
 """
 Given a state of the board, return the probability it is a good position

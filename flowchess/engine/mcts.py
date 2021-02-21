@@ -36,14 +36,13 @@ class Node:
 		return child
 	
 	def predict(self, nn):
-		key = [.01, 1, 2.9, 3, 5, 9, 1.5]
+		key = [.01, 1, 2.9, 3, 5, 9, 1.5]	#Empty, Pawn, Knight, Bishop, Rook, Queen, King
 		x = torch.zeros(size=(1,64), requires_grad=True).to(nn.device)
-		for i in range(64):
+		for i in range(64):				#Create flat board whre each piece is represented by its value
 			piece = self.state.piece_at(i)
 			if piece == None:
 				x[0,i] = key[0]
-			else: 
-				x[0,i] = key[piece.piece_type] if piece.color else -key[piece.piece_type]
+
 		self.y_pred = nn(x)
 
 	def update_state(self, val):
@@ -76,7 +75,7 @@ class MCTS():
 			curr = self.root
 			state = self.root.state.copy()	#Create copy of board state for each new iteration so original is preserved
 			"""
-			MCTS has 4 components, selction, expansion, simulation, backpropogation
+			MCTS has 4 components, selction, expansion, simulation, back propagation
 			"""
 			#Select
 			while curr.untried == [] and curr.children != []:	#Stop leaf node
@@ -96,7 +95,7 @@ class MCTS():
 				state.push(random.choice(legal_moves))
 				legal_moves = list(state.generate_legal_moves())
 				
-				"""max = float("-inf")
+				"""max = float("-inf")		#Draws all games when doing this?
 				choice = None
 				for move in curr.untried:
 					curr.predict(self.nn)
