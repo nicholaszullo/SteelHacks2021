@@ -76,7 +76,7 @@ class DataPanel(tk.Frame):
 
         # Pack labels
         lbls = [
-            tk.Label(self, text="Flowgod's FlowChess", font=LARGE_FONT),
+            tk.Label(self, text="FlowChess", font=LARGE_FONT),
             tk.Label(self, textvariable=self.current_move_num),
             tk.Label(self, textvariable=self.current_board_num),
             tk.Label(self, textvariable=self.last_move),
@@ -184,8 +184,3 @@ class ChessBoard(tk.Frame):
 # b.push_uci("e7e5")
 # b.push_uci("b1c3")
 # b.push_uci("g8f6")
-
-
-
-
-
